@@ -1,0 +1,6 @@
+akshare>=1.17
+pandas
+openpyxl
+python-docx
+matplotlib
+formulas

@@ -1,0 +1,15 @@
+{
+  "as_of": "2026-11-09",
+  "prices": [
+    {"product": "通用 DRAM（合约价）", "metric": "环比", "period": "4Q26E", "value": "+10–15%", "source": "TrendForce 集邦 新闻稿", "date": "2026-09-30", "url": "https://www.trendforce.com/presscenter/news/20260930-13258.html"},
+    {"product": "通用 DRAM（合约价）", "metric": "环比", "period": "4Q26E", "value": "约 +20%", "source": "TrendForce 新闻（引用工商时报）", "date": "2026-10-20", "url": "https://www.trendforce.com/news/2026/10/20/news-dram-prices-seen-rising-20-qoq-in-4q26-despite-slower-gains-ai-demand-tight-supply-support-outlook/"},
+    {"product": "NAND Flash（合约价，综合）", "metric": "环比", "period": "4Q26E", "value": "+15–20%", "source": "TrendForce 集邦 新闻稿", "date": "2026-09-30", "url": "https://www.trendforce.com/presscenter/news/20260930-13258.html"},
+    {"product": "企业级 SSD（合约价）", "metric": "环比", "period": "4Q26E", "value": "+23–28%", "source": "TrendForce 集邦 新闻稿", "date": "2026-09-30", "url": "https://www.trendforce.com/presscenter/news/20260930-13258.html"},
+    {"product": "NAND 晶圆（MLC/TLC/QLC 合约价）", "metric": "月度变化", "period": "2026年10月", "value": "持平", "source": "TrendForce 晶圆报告（摘要）", "date": "2026-10-30", "url": "https://www.trendforce.com/research/category/Semiconductors/NAND%20Flash"}
+  ],
+  "notes": [
+    "TrendForce 认为在前几个季度大幅上涨后，4Q26 涨幅趋缓；服务器 DRAM 仍供不应求 [TrendForce，2026-09-30]。",
+    "消费类 NAND 合约价谈判陷入僵持，现货需求疲弱；PC OEM 库存充足 [TrendForce 简报，2026-11-04，仅阅读摘要]。",
+    "1Q26 存储价格展望被大幅上调，各品类环比涨幅均创纪录 [TrendForce，2026-02-02]。"
+  ]
+}

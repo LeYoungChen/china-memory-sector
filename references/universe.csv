@@ -1,0 +1,13 @@
+code,name_cn,name_en,segment,board,description
+603986,兆易创新,GigaDevice,存储设计,沪市主板,NOR Flash 龙头；利基型 DRAM（长鑫代工）；MCU 与传感器
+300223,北京君正,Ingenic,存储设计,创业板,旗下 ISSI：车规/工业 SRAM、利基 DRAM、NOR；另有 SoC 业务
+688766,普冉股份,Puya,存储设计,科创板,NOR Flash 与 EEPROM；拓展 MCU
+688110,东芯股份,Dosilicon,存储设计,科创板,SLC NAND / NOR / 利基 DRAM 设计（Fabless）
+688123,聚辰股份,Giantec,存储设计,科创板,EEPROM（含 DDR5 SPD）、NOR、智能卡芯片
+688008,澜起科技,Montage,接口与主控,科创板,DDR4/DDR5 内存接口芯片（RCD/DB/SPD）；PCIe Retimer；CXL
+688449,联芸科技,Maxio,接口与主控,科创板,SSD 主控芯片；AIoT 信号处理芯片
+301308,江波龙,Longsys,模组与存储,创业板,存储模组/SSD（FORESEE、Lexar）；嵌入式存储；企业级 SSD
+688525,佰维存储,BIWIN,模组与存储,科创板,嵌入式存储/SSD，自有封测；可穿戴存储
+001309,德明利,Demingli,模组与存储,深市主板,闪存主控 + 模组；企业级 SSD / DRAM 模组
+300042,朗科科技,Netac,模组与存储,创业板,消费级闪存/SSD 品牌；专利授权
+300475,香农芯创,Shannon Semi,分销,创业板,SK 海力士存储分销（云厂商/OEM）；自有品牌企业级 SSD
