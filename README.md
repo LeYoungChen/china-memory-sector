@@ -38,7 +38,7 @@ $CMS all     ~/research/memory-2026-11      # 生成 Excel + Word 并校验公�
 或临时指定：`UNIVERSE_GLOBAL=/path/to/global.csv $CMS fetch <workdir>`。
 
 ## 多台电脑同步
-仓库：https://github.com/LeYoungChen/china-memory-sector（私有）
+仓库：https://github.com/LeYoungChen/china-memory-sector（公开）
 
 **本机修改后上传：**
 ```bash
@@ -46,7 +46,10 @@ cd ~/.agents/skills/china-memory-sector && git add -A && git commit -m "更新�
 ```
 
 **其他电脑首次安装：**
+
+前提：已安装 git 和 python3（3.10+）。仓库是公开的，无需登录 GitHub。安装（任一步失败会立即停止）：
 ```bash
+set -e
 git clone https://github.com/LeYoungChen/china-memory-sector.git ~/.agents/skills/china-memory-sector
 for a in claude codex cursor gemini; do mkdir -p ~/.$a/skills && ln -sfn ../../.agents/skills/china-memory-sector ~/.$a/skills/china-memory-sector; done
 ~/.agents/skills/china-memory-sector/bin/cms setup
@@ -56,3 +59,4 @@ for a in claude codex cursor gemini; do mkdir -p ~/.$a/skills && ln -sfn ../../.
 ```bash
 cd ~/.agents/skills/china-memory-sector && git pull
 ```
+（Python 依赖有新增时，下次运行 `cms` 会自动补装。）
