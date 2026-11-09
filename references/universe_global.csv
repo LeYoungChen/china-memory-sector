@@ -1,0 +1,14 @@
+ticker,name_cn,name_en,segment,market,description,a_share_peers
+005930.KS,三星电子,Samsung Electronics,存储原厂,韩国,全球最大 DRAM/NAND 厂商；另有手机、显示、晶圆代工等业务（非纯存储）,
+000660.KS,SK海力士,SK hynix,存储原厂,韩国,DRAM/HBM 龙头，NAND（含 Solidigm）；香农芯创的上游原厂,香农芯创
+MU,美光科技,Micron,存储原厂,美国,DRAM/HBM 与 NAND；财年截至 8 月底,
+285A.T,铠侠,Kioxia,存储原厂,日本,NAND Flash 原厂（与闪迪合资生产）,
+SNDK,闪迪,SanDisk,存储原厂,美国,NAND Flash 与 SSD（2025 年自西部数据分拆）,
+2408.TW,南亚科,Nanya Technology,利基存储,中国台湾,利基/通用 DRAM 原厂（DDR4/DDR5、LPDDR）,兆易创新;北京君正
+2344.TW,华邦电子,Winbond,利基存储,中国台湾,NOR Flash、SLC NAND、利基 DRAM 原厂,兆易创新;普冉股份;东芯股份
+2337.TW,旺宏电子,Macronix,利基存储,中国台湾,NOR Flash 龙头、SLC NAND,兆易创新;普冉股份
+RMBS,Rambus,Rambus,接口与主控,美国,DDR5 内存接口芯片（RCD/PMIC/SPD）与 IP 授权,澜起科技
+SIMO,慧荣科技,Silicon Motion,接口与主控,美国(ADR),SSD/eMMC/UFS 主控芯片龙头,联芸科技;德明利
+8299.TWO,群联电子,Phison,接口与主控,中国台湾,NAND 主控 + 存储方案（含企业级 SSD）,联芸科技;江波龙
+3260.TWO,威刚科技,ADATA,模组与存储,中国台湾,DRAM 模组、SSD、存储卡品牌,江波龙;佰维存储;德明利
+2451.TW,创见资讯,Transcend,模组与存储,中国台湾,工控/消费级存储模组与 SSD,江波龙;朗科科技

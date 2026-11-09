@@ -90,6 +90,9 @@ def cover(wb, d):
         ("年度财务", "近 5 年营收、净利润、毛利率"),
         ("单季财务", "各公司单季营收、毛利、净利润（近 16 个季度）"),
         ("周期指标", "板块单季汇总：毛利率、营收同比、存货天数"),
+        ("海外可比", "三星、SK 海力士、美光等 13 家海外公司估值（折人民币；需 global.json）"),
+        ("海外单季", "海外公司单季营收、毛利率、净利率"),
+        ("中外对比", "A 股细分 vs 海外可比细分：PE、远期 PE、PB、毛利率"),
         ("行业价格", "DRAM/NAND 合约价等行业数据（手工输入，注明来源）"),
     ], r + 1):
         put(ws, i, 1, s)
@@ -169,6 +172,7 @@ def comps(wb, d):
     put(ws, r + 1, 2, "注：细分板块市值为合计，其余为数值项简单平均。周期顶部利润下 PE 会低估常态估值，"
         "请结合“估值历史”中的 PB 分位及“年度财务”中的 5 年平均利润判断。")
     ws.freeze_panes = "D5"
+    return first, last
 
 
 def val_history(wb, d):
@@ -387,23 +391,142 @@ def industry(wb, ind):
             put(ws, i, 1, n)
 
 
+GSEGS = ["存储原厂", "利基存储", "接口与主控", "模组与存储"]
+PEER_MAP = [("存储设计", "利基存储"), ("接口与主控", "接口与主控"), ("模组与存储", "模组与存储"), ("分销", "存储原厂")]
+
+
+def global_comps(wb, g):
+    """海外可比：本币输入 + 汇率输入，人民币市值与估值倍数为公式。返回 (首行, 末行)。"""
+    ws = wb.create_sheet("海外可比")
+    title(ws, "海外存储公司可比估值", f"数据日期 {g['as_of']} · Yahoo Finance · 市值、利润折算为亿元人民币（汇率见 J 列）")
+    cols = ["代码", "公司", "细分板块", "市场", "交易币种", "财报币种", "总市值（本币）", "TTM 归母净利（财报币种）",
+            "TTM 营收（财报币种）", "交易币种汇率（→人民币）", "财报币种汇率（→人民币）", "总市值（亿元）",
+            "TTM 净利（亿元）", "TTM 营收（亿元）", "PE（TTM）", "Yahoo PE（备用）", "PE 采用值", "远期 PE（一致预期）",
+            "PB", "EV/EBITDA", "最新单季毛利率", "毛利率所属季度", "TTM 截至", "对标 A 股"]
+    header(ws, 4, cols, [10, 11, 11, 9, 8, 8, 16, 15, 15, 11, 11, 11, 10, 10, 9, 9, 9, 10, 8, 9, 10, 9, 11, 22])
+    fx = g["fx_to_cny"]
+    first = r = 5
+    for c in g["companies"]:
+        i = c.get("info") or {}
+        cur, fcur = i.get("currency"), i.get("financialCurrency") or i.get("currency")
+        t = c.get("ttm_q")
+        qs = [q for q in (c.get("quarters") or []) if q.get("gross_profit") is not None]
+        put(ws, r, 1, c["ticker"]); put(ws, r, 2, c["name_cn"]); put(ws, r, 3, c["segment"]); put(ws, r, 4, c["market"])
+        put(ws, r, 5, cur); put(ws, r, 6, fcur)
+        put(ws, r, 7, i.get("marketCap"), '#,##0', inp=True)
+        put(ws, r, 8, t["net_profit"] if t else None, '#,##0', inp=True)
+        put(ws, r, 9, t["revenue"] if t else None, '#,##0', inp=True)
+        put(ws, r, 10, fx.get(cur), '0.000000', inp=True)
+        put(ws, r, 11, fx.get(fcur), '0.000000', inp=True)
+        put(ws, r, 12, f'=IF(AND(N(G{r})>0,N(J{r})>0),G{r}*J{r}/100000000,"n.m.")', F_YI)
+        put(ws, r, 13, f'=IF(AND(ISNUMBER(H{r}),N(K{r})>0),H{r}*K{r}/100000000,"n.m.")', F_YI)
+        put(ws, r, 14, f'=IF(AND(ISNUMBER(I{r}),N(K{r})>0),I{r}*K{r}/100000000,"n.m.")', F_YI)
+        put(ws, r, 15, f'=IF(AND(ISNUMBER(L{r}),N(M{r})>0),L{r}/M{r},"n.m.")', F_X)
+        put(ws, r, 16, i.get("trailingPE"), F_X, inp=True)
+        put(ws, r, 17, f'=IF(ISNUMBER(O{r}),O{r},IF(N(P{r})>0,P{r},"n.m."))', F_X)
+        put(ws, r, 18, i.get("forwardPE"), F_X, inp=True)
+        put(ws, r, 19, i.get("priceToBook"), F_X, inp=True)
+        put(ws, r, 20, i.get("enterpriseToEbitda"), F_X, inp=True)
+        put(ws, r, 21, qs[-1]["gross_profit"] / qs[-1]["revenue"] if qs else None, F_PCT, inp=True)
+        put(ws, r, 22, qs[-1]["quarter"] if qs else None)
+        put(ws, r, 23, t["through"] if t else "不连续")
+        put(ws, r, 24, (c.get("a_share_peers") or "").replace(";", "、"))
+        for col in range(1, 25):
+            ws.cell(row=r, column=col).border = THIN
+        r += 1
+    last = r - 1
+    r += 1
+    for lab, fn in [("最大值", "MAX({})"), ("中位数", "MEDIAN({})"), ("最小值", "MIN({})")]:
+        put(ws, r, 2, lab, bold=True)
+        for col, fmt in {12: F_YI, 17: F_X, 18: F_X, 19: F_X, 20: F_X, 21: F_PCT}.items():
+            put(ws, r, col, f'=IFERROR({fn.format(f"{L(col)}{first}:{L(col)}{last}")},"-")', fmt)
+        for col in range(1, 25):
+            ws.cell(row=r, column=col).fill = SFILL
+        r += 1
+    put(ws, r + 1, 2, "注：PE 优先用最近连续 4 个季度归母净利合计计算；季度不连续时采用 Yahoo trailingPE。"
+                      "远期 PE 为 Yahoo 一致预期。三星电子含非存储业务。季度按财报期末所在自然季度归类（美光财年截至 8 月）。")
+    warns = [f"{c['name_cn']} {q['quarter']}：{q['warning']}" for c in g["companies"]
+             for q in (c.get("quarters") or []) if q.get("warning")]
+    for k, w in enumerate(warns, r + 2):
+        put(ws, k, 2, "⚠ " + w)
+    ws.freeze_panes = "C5"
+    return first, last
+
+
+def global_quarterly(wb, g):
+    ws = wb.create_sheet("海外单季")
+    title(ws, "海外存储公司单季损益", "单位：亿元财报币种 · 季度按期末所在自然季度归类")
+    header(ws, 4, ["代码", "公司", "细分板块", "季度", "期末日", "币种", "营收（亿）", "毛利（亿）", "归母净利（亿）",
+                   "毛利率", "净利率"], [10, 11, 11, 9, 11, 7, 11, 11, 11, 9, 9])
+    r = 5
+    for c in g["companies"]:
+        fcur = (c.get("info") or {}).get("financialCurrency")
+        for q in c.get("quarters") or []:
+            put(ws, r, 1, c["ticker"]); put(ws, r, 2, c["name_cn"]); put(ws, r, 3, c["segment"])
+            put(ws, r, 4, q["quarter"]); put(ws, r, 5, q["period_end"]); put(ws, r, 6, fcur)
+            put(ws, r, 7, yi(q["revenue"]), F_YI, inp=True)
+            put(ws, r, 8, yi(q["gross_profit"]), F_YI, inp=True)
+            put(ws, r, 9, yi(q["net_profit"]), F_YI, inp=True)
+            put(ws, r, 10, f'=IF(AND(N(G{r})>0,ISNUMBER(H{r})),H{r}/G{r},"n.m.")', F_PCT)
+            put(ws, r, 11, f'=IF(AND(N(G{r})>0,ISNUMBER(I{r})),I{r}/G{r},"n.m.")', F_PCT)
+            r += 1
+    ws.freeze_panes = "D5"
+    ws.auto_filter.ref = f"A4:K{r - 1}"
+
+
+def peer_compare(wb, a_first, a_last, g_first, g_last):
+    ws = wb.create_sheet("中外对比")
+    title(ws, "A 股 vs 海外：可比细分估值与盈利", "均值基于“可比估值”和“海外可比”表（AVERAGEIF，忽略 n.m.）；整体行为中位数")
+    header(ws, 4, ["A 股细分", "海外可比细分", "A 股家数", "海外家数", "A 股 PE", "海外 PE", "海外远期 PE",
+                   "A 股 PB", "海外 PB", "A 股毛利率（YTD）", "海外最新单季毛利率", "PE 溢价（A/海外−1）"],
+           [12, 13, 8, 8, 9, 9, 10, 9, 9, 12, 13, 12])
+    A = lambda c: f"'可比估值'!${c}${a_first}:${c}${a_last}"
+    G = lambda c: f"'海外可比'!${c}${g_first}:${c}${g_last}"
+    r = 5
+    for a_seg, g_seg in PEER_MAP:
+        put(ws, r, 1, a_seg); put(ws, r, 2, g_seg)
+        put(ws, r, 3, f'=COUNTIF({A("C")},A{r})'); put(ws, r, 4, f'=COUNTIF({G("C")},B{r})')
+        for col, (rng, key, fmt) in {5: (A, "R", F_X), 6: (G, "Q", F_X), 7: (G, "R", F_X), 8: (A, "T", F_X),
+                                      9: (G, "S", F_X), 10: (A, "N", F_PCT), 11: (G, "U", F_PCT)}.items():
+            crit = f"A{r}" if rng is A else f"B{r}"
+            put(ws, r, col, f'=IFERROR(AVERAGEIF({rng("C")},{crit},{rng(key)}),"n.m.")', fmt)
+        put(ws, r, 12, f'=IF(AND(ISNUMBER(E{r}),ISNUMBER(F{r})),E{r}/F{r}-1,"n.m.")', F_PCT)
+        r += 1
+    put(ws, r, 1, "整体（中位数）", bold=True)
+    put(ws, r, 3, f'=COUNTA({A("C")})'); put(ws, r, 4, f'=COUNTA({G("C")})')
+    for col, (rng, key, fmt) in {5: (A, "R", F_X), 6: (G, "Q", F_X), 7: (G, "R", F_X), 8: (A, "T", F_X),
+                                  9: (G, "S", F_X), 10: (A, "N", F_PCT), 11: (G, "U", F_PCT)}.items():
+        put(ws, r, col, f'=IFERROR(MEDIAN({rng(key)}),"n.m.")', fmt)
+    put(ws, r, 12, f'=IF(AND(ISNUMBER(E{r}),ISNUMBER(F{r})),E{r}/F{r}-1,"n.m.")', F_PCT)
+    for col in range(1, 13):
+        ws.cell(row=r, column=col).fill = SFILL
+    put(ws, r + 2, 1, "注：A 股“分销”与海外“存储原厂”并非同业，仅作上下游参照（香农芯创代理 SK 海力士）。"
+                      "A 股毛利率为年初至今口径，海外为最新单季口径。")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--industry")
+    ap.add_argument("--global", dest="glob")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     d = json.load(open(a.data, encoding="utf-8"))
     ind = json.load(open(a.industry, encoding="utf-8")) if a.industry and os.path.exists(a.industry) else None
+    g = json.load(open(a.glob, encoding="utf-8")) if a.glob and os.path.exists(a.glob) else None
     wb = Workbook()
     cover(wb, d)
     universe(wb, d)
-    comps(wb, d)
+    a_first, a_last = comps(wb, d)
     val_history(wb, d)
     performance(wb, d)
     annual(wb, d)
     qs, qlast = quarterly(wb, d)
     cycle(wb, qs, qlast)
+    if g:
+        g_first, g_last = global_comps(wb, g)
+        global_quarterly(wb, g)
+        peer_compare(wb, a_first, a_last, g_first, g_last)
     industry(wb, ind)
     for ws in wb.worksheets:
         ws.sheet_view.showGridLines = False

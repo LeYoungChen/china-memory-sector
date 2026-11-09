@@ -196,21 +196,87 @@ def chart_perf(p, path):
     save(f, path)
 
 
+G_COLORS = ["#1F3864", "#2E75B6", "#5B9BD5", "#70AD47", "#A5A5A5"]
+
+
+def chart_global_gm(g, q, path):
+    """海外原厂单季毛利率 vs A 股细分毛利率（领先-滞后对照）。"""
+    gq = M.global_quarters(g)
+    a_quarters = [r["quarter"] for r in q]
+    xs = sorted({x["quarter"] for x in gq if x["segment"] == "存储原厂"} | set(a_quarters[-6:]))
+    xs = [x for x in xs if x >= a_quarters[-6]]
+    f, ax = plt.subplots(figsize=(8, 3.6))
+    names = [c["name_cn"] for c in g["companies"] if c["segment"] == "存储原厂"]
+    for k, n in enumerate(names):
+        pts = {x["quarter"]: x["gm"] for x in gq if x["name"] == n and x["gm"] is not None}
+        ax.plot(xs, [pts[x] * 100 if x in pts else None for x in xs], marker="o", ms=3, lw=1.4,
+                color=G_COLORS[k % len(G_COLORS)], label=n)
+    for s, style in (("模组与存储", "--"), ("存储设计", ":")):
+        pts = {r["quarter"]: r["seg_gm"].get(s) for r in q}
+        ax.plot(xs, [pts[x] * 100 if pts.get(x) is not None else None for x in xs], ls=style, lw=2,
+                color="#C55A11", label=f"A 股{s}（合计）")
+    ax.set_ylabel("单季毛利率（%）"); ax.legend(frameon=False, fontsize=7, ncol=4, loc="upper left")
+    ax.tick_params(axis="x", rotation=45)
+    save(f, path)
+
+
+def chart_global_pe(grows, rows, path):
+    gs = [r for r in grows if r["pe"] is not None]
+    gs.sort(key=lambda r: r["pe"])
+    f, ax = plt.subplots(figsize=(8, 3.8))
+    ys = range(len(gs))
+    ax.barh([y + 0.2 for y in ys], [r["pe"] for r in gs], height=0.4, color="#2E75B6", label="PE（TTM）")
+    ax.barh([y - 0.2 for y in ys], [r["fpe"] or 0 for r in gs], height=0.4, color="#9DC3E6", label="远期 PE（一致预期）")
+    ax.set_yticks(list(ys)); ax.set_yticklabels([r["name"] for r in gs])
+    med = M.stats(rows, "pe").get("median")
+    if med:
+        ax.axvline(med, color="#C55A11", ls="--", lw=1)
+        ax.set_ylim(-1.4, len(gs) - 0.4)
+        ax.text(med + 0.5, -1.0, f"A 股样本 PE 中位数 {med:.1f}x", color="#C55A11", fontsize=8, va="center")
+    ax.set_xlabel("倍数（x）"); ax.legend(frameon=False, fontsize=8, loc="lower right")
+    save(f, path)
+
+
+def global_section(doc, an, g, rows, q, ch, fig_no):
+    grows = M.global_comps(g)
+    paras(doc, an.get("global_view"))
+    table(doc, ["公司", "细分", "市场", "总市值（亿元）", "PE（TTM）", "远期 PE", "PB", "EV/EBITDA", "最新单季毛利率", "对标 A 股"],
+          [[r["name"], r["segment"], r["market"], fx(r["mcap"], "n"), fx(r["pe"]) + ("*" if r["pe_src"] == "Yahoo" else ""),
+            fx(r["fpe"]), fx(r["pb"]), fx(r["ev_ebitda"]), f"{fx(r['gm_lastq'], 'm')}（{r['gm_lastq_label']}）",
+            r["a_share_peers"].replace(";", "、")] for r in sorted(grows, key=lambda r: -(r["mcap"] or 0))],
+          foot=f"来源：Yahoo Finance，数据日期 {g['as_of']}；市值按当日汇率折人民币。PE 用最近连续 4 季归母净利计算，"
+               "* 表示季度不连续、采用 Yahoo trailingPE。三星电子含非存储业务。海外最新季度可能滞后于 A 股（以表中季度为准）。")
+    table(doc, ["A 股细分", "海外可比", "A 股 PE", "海外 PE", "海外远期 PE", "A 股 PB", "海外 PB", "A 股毛利率", "海外毛利率"],
+          [[p["a_seg"], p["g_seg"], fx(p["a_pe"]), fx(p["g_pe"]), fx(p["g_fpe"]), fx(p["a_pb"]), fx(p["g_pb"]),
+            fx(p["a_gm"], "m"), fx(p["g_gm"], "m")] for p in M.peer_compare(rows, grows)],
+          foot="均为中位数。A 股毛利率为年初至今口径，海外为最新单季口径。A 股“分销”与海外“存储原厂”仅作上下游参照。")
+    fig(doc, ch["ggm"], f"图 {fig_no}：海外存储原厂单季毛利率 vs A 股细分毛利率")
+    fig(doc, ch["gpe"], f"图 {fig_no + 1}：海外公司 PE 与远期 PE（虚线为 A 股样本 PE 中位数）")
+    warns = [w for r in grows for w in r["warnings"]]
+    if warns or g.get("failures"):
+        note(doc, "海外数据提示：" + "；".join([f"{r['name']} {w}" for r in grows for w in r["warnings"]] +
+                                         [f"{x['ticker']} {x['part']} 抓取失败" for x in g.get("failures", [])]))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--analysis", required=True)
     ap.add_argument("--industry")
+    ap.add_argument("--global", dest="glob")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     d = json.load(open(a.data, encoding="utf-8"))
     an = json.load(open(a.analysis, encoding="utf-8"))
     ind = json.load(open(a.industry, encoding="utf-8")) if a.industry and os.path.exists(a.industry) else {}
+    g = json.load(open(a.glob, encoding="utf-8")) if a.glob and os.path.exists(a.glob) else None
     rows, q, p = M.comps(d), M.quarters_agg(d), M.perf(d)
     tmp = tempfile.mkdtemp()
-    ch = {k: os.path.join(tmp, k + ".png") for k in ("cycle", "seg", "pbpct", "pbroe", "perf")}
+    ch = {k: os.path.join(tmp, k + ".png") for k in ("cycle", "seg", "pbpct", "pbroe", "perf", "ggm", "gpe")}
     chart_cycle(q, ch["cycle"]); chart_seg_gm(q, ch["seg"]); chart_pb_pct(rows, ch["pbpct"])
     chart_pb_roe(rows, ch["pbroe"]); chart_perf(p, ch["perf"])
+    if g:
+        chart_global_gm(g, q, ch["ggm"]); chart_global_pe(M.global_comps(g), rows, ch["gpe"])
 
     doc = Document()
     st = doc.styles["Normal"]
@@ -277,6 +343,11 @@ def main():
           foot="扣非 PE 使用扣除非经常性损益后的净利润。PB = 股价 / 最新每股净资产；分位基于东方财富日度 PB。ROE 未年化。")
     fig(doc, ch["pbpct"], "图 3：当前 PB 在近 3 年区间中的分位（标签为东方财富口径当前 PB，可能与估值表中“股价/最新每股净资产”口径不同）")
     fig(doc, ch["pbroe"], "图 4：PB 与 ROE（气泡大小 = 总市值）")
+    next_fig = 5
+    if g:
+        heading(doc, f"{next(sec)}、海外对标", 1)
+        global_section(doc, an, g, rows, q, ch, next_fig)
+        next_fig += 2
 
     heading(doc, f"{next(sec)}、核心争议", 1)
     if an.get("debates"):
@@ -295,9 +366,13 @@ def main():
     bullets(doc, an.get("catalysts"))
 
     heading(doc, "附录一：股价表现", 1)
-    fig(doc, ch["perf"], "图 5：年初至今股价涨跌幅")
+    fig(doc, ch["perf"], f"图 {next_fig}：A 股样本年初至今股价涨跌幅")
     table(doc, ["公司", "近 1 月", "近 3 月", "年初至今", "近 1 年"],
           [[r["name"]] + [fx(r[k], "p") for k in ("1M", "3M", "YTD", "1Y")] for r in p])
+    if g:
+        para(doc, "海外公司（本币计价，复权）：")
+        table(doc, ["公司", "近 1 月", "近 3 月", "年初至今", "近 1 年"],
+              [[r["name"]] + [fx(r[k], "p") for k in ("1M", "3M", "YTD", "1Y")] for r in M.global_perf(g)])
     heading(doc, "附录二：数据来源与说明", 1)
     bullets(doc, (an.get("sources") or []) + (an.get("data_notes") or []))
     if d["failures"]:

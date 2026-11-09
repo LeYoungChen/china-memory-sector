@@ -84,6 +84,83 @@ def annual_avg_np(c, years=5):
     return sum(vals) / len(vals) / YI if vals else None
 
 
+GLOBAL_SEGMENTS = ["存储原厂", "利基存储", "接口与主控", "模组与存储"]
+# A 股细分 → 最可比的海外细分
+PEER_MAP = {"存储设计": "利基存储", "接口与主控": "接口与主控", "模组与存储": "模组与存储", "分销": "存储原厂"}
+
+
+def global_comps(g):
+    """海外可比：市值折人民币亿元；PE 优先用连续 4 季 TTM 计算，否则回退 Yahoo trailingPE。"""
+    fx = g["fx_to_cny"]
+    rows = []
+    for c in g["companies"]:
+        i = c.get("info") or {}
+        cur, fcur = i.get("currency"), i.get("financialCurrency") or i.get("currency")
+        fx_t, fx_f = fx.get(cur), fx.get(fcur)
+        mcap_local = i.get("marketCap")
+        mcap = mcap_local * fx_t / YI if mcap_local and fx_t else None
+        t = c.get("ttm_q")
+        np_ttm = t["net_profit"] * fx_f / YI if t and fx_f else None
+        rev_ttm = t["revenue"] * fx_f / YI if t and fx_f else None
+        pe, pe_src = (_div(mcap, np_ttm), "季度合计") if t else (i.get("trailingPE"), "Yahoo")
+        qs = c.get("quarters") or []
+        lastq = qs[-1] if qs else {}
+        by = {q["quarter"]: q for q in qs}
+        prev = by.get(f"{int(lastq['quarter'][:4]) - 1}{lastq['quarter'][4:]}") if lastq else None
+        gmq = [q for q in qs if q.get("gross_profit") is not None]
+        rows.append({
+            "ticker": c["ticker"], "name": c["name_cn"], "name_en": c["name_en"], "segment": c["segment"],
+            "market": c["market"], "currency": cur, "fx": fx_t, "mcap": mcap, "ttm_rev": rev_ttm, "ttm_np": np_ttm,
+            "ttm_through": t["through"] if t else None, "pe": pe, "pe_src": pe_src,
+            "fpe": i.get("forwardPE"), "pb": i.get("priceToBook"), "ev_ebitda": i.get("enterpriseToEbitda"),
+            "gm_lastq": gmq[-1]["gross_profit"] / gmq[-1]["revenue"] if gmq else None,
+            "gm_lastq_label": gmq[-1]["quarter"] if gmq else None,
+            "gm_prevq": gmq[-2]["gross_profit"] / gmq[-2]["revenue"] if len(gmq) > 1 else None,
+            "rev_yoy_lastq": _growth(lastq.get("revenue"), prev["revenue"]) if prev else None,
+            "last_quarter": lastq.get("quarter"), "a_share_peers": c.get("a_share_peers") or "",
+            "warnings": [f"{q['quarter']}：{q['warning']}" for q in qs if q.get("warning")],
+        })
+    return rows
+
+
+def global_quarters(g):
+    out = []
+    for c in g["companies"]:
+        for q in c.get("quarters") or []:
+            out.append({"name": c["name_cn"], "segment": c["segment"], "quarter": q["quarter"],
+                        "period_end": q["period_end"],
+                        "gm": q["gross_profit"] / q["revenue"] if q.get("gross_profit") is not None else None,
+                        "nm": q["net_profit"] / q["revenue"] if q.get("net_profit") is not None else None})
+    return out
+
+
+def global_perf(g):
+    rows = []
+    for c in g["companies"]:
+        p = c.get("performance") or {}
+        last = (p.get("last") or {}).get("close_adj")
+        r = {"name": c["name_cn"], "segment": c["segment"]}
+        for k in ("1M", "3M", "YTD", "1Y"):
+            base = (p.get(k) or {}).get("close_adj")
+            r[k] = last / base - 1 if last and base else None
+        rows.append(r)
+    return rows
+
+
+def peer_compare(a_rows, g_rows):
+    """A 股细分 vs 海外可比细分的中位数对比。"""
+    out = []
+    for a_seg, g_seg in PEER_MAP.items():
+        a = [r for r in a_rows if r["segment"] == a_seg]
+        b = [r for r in g_rows if r["segment"] == g_seg]
+        out.append({"a_seg": a_seg, "g_seg": g_seg, "a_n": len(a), "g_n": len(b),
+                    "a_pe": stats(a, "pe").get("median"), "g_pe": stats(b, "pe").get("median"),
+                    "a_pb": stats(a, "pb").get("median"), "g_pb": stats(b, "pb").get("median"),
+                    "a_gm": stats(a, "gm").get("median"), "g_gm": stats(b, "gm_lastq").get("median"),
+                    "g_fpe": stats(b, "fpe").get("median")})
+    return out
+
+
 def perf(d):
     rows = []
     for c in d["companies"]:

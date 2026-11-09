@@ -1,6 +1,6 @@
 ---
 name: china-memory-sector
-description: 中国存储芯片（存储板块）行业分析，输出中文 Excel 估值底稿 + 中文 Word 研究报告。覆盖 A 股存储设计、接口与主控、模组与存储、分销（兆易创新、澜起科技、江波龙、佰维存储、北京君正、德明利、普冉股份、东芯股份、聚辰股份、联芸科技、香农芯创、朗科科技）。Use when the user asks for a China memory-chip / 存储 / DRAM / NAND / NOR sector review, comps, cycle update, "存储板块分析", "存储行业报告".
+description: 中国存储芯片（存储板块）行业分析，输出中文 Excel 估值底稿 + 中文 Word 研究报告，并与海外同业对标。覆盖 A 股存储设计、接口与主控、模组与存储、分销（兆易创新、澜起科技、江波龙、佰维存储、北京君正、德明利、普冉股份、东芯股份、聚辰股份、联芸科技、香农芯创、朗科科技），海外对标三星、SK 海力士、美光、铠侠、闪迪、南亚科、华邦、旺宏、Rambus、慧荣、群联、威刚、创见。Use when the user asks for a China memory-chip / 存储 / DRAM / NAND / NOR sector review, comps, global peer comparison, cycle update, "存储板块分析", "存储行业报告", "海外存储对标".
 ---
 
 # 中国存储芯片板块分析
@@ -29,7 +29,8 @@ $CMS <命令> <workdir> [参数]
 
 | 命令 | 作用 |
 |---|---|
-| `$CMS fetch <workdir> [YYYY-MM-DD]` | 抓取行情、估值历史、财务数据 → `<workdir>/data/dataset.json` |
+| `$CMS fetch <workdir> [YYYY-MM-DD]` | 抓取 A 股数据 → `data/dataset.json`，并抓取海外同业 → `data/global.json` |
+| `$CMS fetch-global <workdir> [YYYY-MM-DD]` | 仅重新抓取海外同业（Yahoo 偶发限流时使用） |
 | `$CMS summary <workdir>` | 打印撰写分析所需的关键数据（中文） |
 | `$CMS excel <workdir>` | 生成 Excel 并自动重算校验公式 |
 | `$CMS report <workdir>` | 生成 Word 报告（需要 analysis.json） |
@@ -40,7 +41,8 @@ $CMS <命令> <workdir> [参数]
 ## 工作流程
 
 ### 第 1 步 —— 明确范围（不清楚时才问）
-- 样本：默认 `references/universe.csv`（12 家，4 个细分）。用户可增删。
+- 样本：默认 `references/universe.csv`（A 股 12 家，4 个细分）和 `references/universe_global.csv`
+  （海外 13 家：存储原厂 / 利基存储 / 接口与主控 / 模组与存储，`a_share_peers` 列标注对标 A 股公司）。用户可增删。
 - 视角：中性的周期跟踪（默认），或主题论点（如"AI/HBM 外溢""国产替代"）。
 - 数据日期：默认今天。
 
@@ -48,6 +50,10 @@ $CMS <命令> <workdir> [参数]
 
 ### 第 2 步 —— 抓取数据
 `$CMS fetch <workdir>`。某只股票抓取失败要如实报告，不得静默剔除或估算。
+海外数据来自 Yahoo Finance（yfinance），市值按当日汇率折人民币。注意：
+- 海外最新季度常滞后于 A 股（数据源更新慢）；以 summary 中显示的季度为准，写作时注明。
+- 脚本会把毛利率超出 ±100% 的季度置空并给出 ⚠ 提示——必须在报告的数据说明中披露。
+- 季度不连续时 PE 回退为 Yahoo trailingPE（表中标 *）。三星电子含非存储业务。
 
 ### 第 3 步 —— 行业价格数据（脚本无法获取的部分）
 AKShare 没有 DRAM/NAND 合约价。联网搜索最新的 TrendForce 集邦 / DRAMeXchange / CFM 闪存市场数据，
@@ -55,7 +61,8 @@ AKShare 没有 DRAM/NAND 合约价。联网搜索最新的 TrendForce 集邦 / D
 每一行都要有来源和日期；找不到可靠数据就留空，Excel 会保留空白输入模板。
 
 ### 第 4 步 —— 生成 Excel
-`$CMS excel <workdir>`。工作表：封面 · 公司池 · 可比估值 · 估值历史 · 股价表现 · 年度财务 · 单季财务 · 周期指标 · 行业价格。
+`$CMS excel <workdir>`。工作表：封面 · 公司池 · 可比估值 · 估值历史 · 股价表现 · 年度财务 · 单季财务 · 周期指标 ·
+海外可比 · 海外单季 · 中外对比 · 行业价格（无 global.json 时自动跳过三张海外表）。
 
 **审核节点：** 写正文前先向用户展示可比估值要点（PE/PB 中位数、高低估值公司）和数据缺口。
 
@@ -66,6 +73,8 @@ AKShare 没有 DRAM/NAND 合约价。联网搜索最新的 TrendForce 集邦 / D
 - 先给结论。明确当前周期位置，以及什么会改变判断。
 - 警惕周期失真：盈利顶部 PE 有误导性。对比 TTM 利润与"年度财务"中的 5 年均值；非经常性损益大时用扣非 PE。
 - 写之前做合理性检查：若每股净资产增幅远超留存收益（增发或其他综合收益），PB 分位会机械性下降，要说明而不是称其"便宜"。
+- 海外对标（`global_view` 字段）至少回答三个问题：① 海外原厂单季毛利率方向（A 股的领先指标）；
+  ② A 股各细分相对海外同业的 PE/PB 溢价或折价及原因；③ 近期股价回调是全球性的还是中国特有的。
 
 ### 第 6 步 —— 生成报告
 `$CMS report <workdir>`。

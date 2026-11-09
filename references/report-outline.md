@@ -11,9 +11,10 @@ Word 报告由 `build_report.py` 生成：表格和图表来自数据，正文�
 | 三、产业结构与价值链 | 细分板块表 | `industry_structure`（段落列表） |
 | 四、竞争格局 | 公司对比表 | `competitive_landscape`（段落列表）、`segment_notes`（细分 → 文字） |
 | 五、估值分析 | 可比估值表、PB 分位图、PB-ROE 散点图 | `valuation_view`（段落列表） |
-| 六、核心争议 | — | `debates`（[{topic, bull, bear}]） |
-| 七、重点关注公司 | — | `names_to_watch`（[{name, angle, risk}]） |
-| 八、风险与催化剂 | — | `risks`、`catalysts`（字符串列表） |
+| 六、海外对标（有 global.json 时） | 海外可比表、中外对比表、原厂 vs A 股毛利率图、海外 PE/远期 PE 图 | `global_view`（段落列表） |
+| 七、核心争议 | — | `debates`（[{topic, bull, bear}]） |
+| 八、重点关注公司 | — | `names_to_watch`（[{name, angle, risk}]） |
+| 九、风险与催化剂 | — | `risks`、`catalysts`（字符串列表） |
 | 附录 | 股价表现、数据说明 | `sources`、`data_notes`（字符串列表） |
 
 `segment_notes` 的键必须与 universe.csv 中的细分名称一致：存储设计 / 接口与主控 / 模组与存储 / 分销。
