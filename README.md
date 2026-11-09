@@ -32,3 +32,23 @@ $CMS all     ~/research/memory-2026-11      # 生成 Excel + Word 并校验公�
 ## 修改样本
 编辑 `references/universe.csv`（细分板块须为：存储设计 / 接口与主控 / 模组与存储 / 分销），
 或临时指定：`UNIVERSE=/path/to/my.csv $CMS fetch <workdir>`。
+
+## 多台电脑同步
+仓库：https://github.com/LeYoungChen/china-memory-sector（私有）
+
+**本机修改后上传：**
+```bash
+cd ~/.agents/skills/china-memory-sector && git add -A && git commit -m "更新说明" && git push
+```
+
+**其他电脑首次安装：**
+```bash
+git clone https://github.com/LeYoungChen/china-memory-sector.git ~/.agents/skills/china-memory-sector
+for a in claude codex cursor gemini; do mkdir -p ~/.$a/skills && ln -sfn ../../.agents/skills/china-memory-sector ~/.$a/skills/china-memory-sector; done
+~/.agents/skills/china-memory-sector/bin/cms setup
+```
+
+**其他电脑拉取更新：**
+```bash
+cd ~/.agents/skills/china-memory-sector && git pull
+```
